@@ -30,10 +30,10 @@ import (
 )
 
 func TestParamListBuild(t *testing.T) {
-	p, err := newParamList(reflect.TypeOf(func() io.Writer { return nil }))
+	p, err := newParamList(reflect.TypeOf(func() io.Writer { return nil }), newScope())
 	require.NoError(t, err)
 	assert.Panics(t, func() {
-		p.Build(New())
+		p.Build(newScope())
 	})
 }
 
@@ -57,7 +57,7 @@ func TestParamObjectSuccess(t *testing.T) {
 		} `name:"bar"`
 	}
 
-	po, err := newParamObject(reflect.TypeOf(in{}))
+	po, err := newParamObject(reflect.TypeOf(in{}), newScope())
 	require.NoError(t, err)
 
 	require.Len(t, po.Fields, 4)
@@ -112,7 +112,9 @@ func TestParamObjectWithUnexportedFieldsSuccess(t *testing.T) {
 		t2 type2
 	}
 
-	po, err := newParamObject(reflect.TypeOf(in{}))
+	_ = in{}.t2 // unused
+
+	po, err := newParamObject(reflect.TypeOf(in{}), newScope())
 	require.NoError(t, err)
 
 	require.Len(t, po.Fields, 1)
@@ -134,7 +136,9 @@ func TestParamObjectFailure(t *testing.T) {
 			a2 A
 		}
 
-		_, err := newParamObject(reflect.TypeOf(in{}))
+		_ = in{}.a2 // unused but needed
+
+		_, err := newParamObject(reflect.TypeOf(in{}), newScope())
 		require.Error(t, err)
 		assert.Contains(t, err.Error(),
 			`bad field "a2" of dig.in: unexported fields not allowed in dig.In, did you mean to export "a2" (dig.A)`)
@@ -149,7 +153,9 @@ func TestParamObjectFailure(t *testing.T) {
 			a2 A
 		}
 
-		_, err := newParamObject(reflect.TypeOf(in{}))
+		_ = in{}.a2 // unused but needed
+
+		_, err := newParamObject(reflect.TypeOf(in{}), newScope())
 		require.Error(t, err)
 		assert.Contains(t, err.Error(),
 			`bad field "a2" of dig.in: unexported fields not allowed in dig.In, did you mean to export "a2" (dig.A)`)
@@ -164,7 +170,9 @@ func TestParamObjectFailure(t *testing.T) {
 			a2 A
 		}
 
-		_, err := newParamObject(reflect.TypeOf(in{}))
+		_ = in{}.a2 // unused but needed
+
+		_, err := newParamObject(reflect.TypeOf(in{}), newScope())
 		require.Error(t, err)
 		assert.Contains(t, err.Error(),
 			`invalid value "foo" for "ignore-unexported" tag on field In: strconv.ParseBool: parsing "foo": invalid syntax`)
@@ -219,51 +227,9 @@ func TestParamGroupSliceErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			_, err := newParamObject(reflect.TypeOf(tt.shape))
+			_, err := newParamObject(reflect.TypeOf(tt.shape), newScope())
 			require.Error(t, err, "expected failure")
 			assert.Contains(t, err.Error(), tt.wantErr)
 		})
 	}
-}
-
-func TestParamVisitorChecksEverything(t *testing.T) {
-	type params struct {
-		In
-
-		ReaderAt io.ReaderAt
-	}
-
-	typeOfReader := reflect.TypeOf((*io.Reader)(nil)).Elem()
-	typeOfWriter := reflect.TypeOf((*io.Writer)(nil)).Elem()
-
-	pl, err := newParamList(reflect.TypeOf(func(io.Reader, params, io.Writer) {
-		t.Fatalf("this function should not be called")
-	}))
-	require.NoError(t, err)
-
-	idx := 0
-	walkParam(pl, paramVisitorFunc(func(p param) bool {
-		defer func() { idx++ }()
-		switch idx {
-		case 0:
-			_, ok := p.(paramList)
-			assert.True(t, ok, "expected paramList, got %T", p)
-		case 1:
-			ps, ok := p.(paramSingle)
-			assert.True(t, ok, "expected paramSingle, got %T", p)
-			assert.Equal(t, typeOfReader, ps.Type, "first parameter didn't match")
-		case 2:
-			_, ok := p.(paramObject)
-			assert.True(t, ok, "expected paramObject, got %T", p)
-			return false // don't recurse
-		case 3:
-			ps, ok := p.(paramSingle)
-			assert.True(t, ok, "expected paramSingle, got %T", p)
-			assert.Equal(t, typeOfWriter, ps.Type, "third parameter didn't match")
-		default:
-			t.Errorf("unexpected call to visitor with %v", p)
-		}
-		return true
-	}))
-	assert.Equal(t, 4, idx, "visitor wasn't called four times")
 }

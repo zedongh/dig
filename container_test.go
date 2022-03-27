@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,5 +20,45 @@
 
 package dig
 
-// Version of the library.
-const Version = "1.15.0-dev"
+import (
+	"fmt"
+	"math/rand"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestOptionStrings(t *testing.T) {
+	t.Parallel()
+
+	t.Run("DeferAcyclicVerification", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Equal(t, "DeferAcyclicVerification()", fmt.Sprint(DeferAcyclicVerification()))
+	})
+
+	t.Run("setRand", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("nil", func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, "setRand(0x0)", fmt.Sprint(setRand(nil)))
+		})
+
+		t.Run("non nil", func(t *testing.T) {
+			t.Parallel()
+
+			opt := setRand(rand.New(rand.NewSource(42)))
+			assert.NotEqual(t, "setRand(0x0)", fmt.Sprint(opt))
+			assert.Contains(t, fmt.Sprint(opt), "setRand(0x")
+		})
+	})
+
+	t.Run("DryRun", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Equal(t, "DryRun(true)", fmt.Sprint(DryRun(true)))
+		assert.Equal(t, "DryRun(false)", fmt.Sprint(DryRun(false)))
+	})
+}

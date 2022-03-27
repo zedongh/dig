@@ -18,13 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:build go1.9
-// +build go1.9
+//go:build tools
+// +build tools
 
-package dig
+package tools
 
-import "reflect"
-
-func anonymousField(t reflect.Type) reflect.StructField {
-	return reflect.StructField{Name: t.Name(), Anonymous: true, Type: t}
-}
+import (
+	// Tools we use during development.
+	_ "golang.org/x/lint/golint"
+	_ "honnef.co/go/tools/cmd/staticcheck"
+)

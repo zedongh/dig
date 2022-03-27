@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2022 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,5 +20,18 @@
 
 package dig
 
-// Version of the library.
-const Version = "1.15.0-dev"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestScopeAncestorsAndStoresToRoot(t *testing.T) {
+	c := New()
+	s1 := c.Scope("child1")
+	s2 := s1.Scope("child2")
+	s3 := s2.Scope("child2")
+
+	assert.Equal(t, []containerStore{s3, s2, s1, c.scope}, s3.storesToRoot())
+	assert.Equal(t, []*Scope{s3, s2, s1, c.scope}, s3.ancestors())
+}
